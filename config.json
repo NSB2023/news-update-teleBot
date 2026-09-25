@@ -1,0 +1,156 @@
+{
+  "timezone": "Asia/Dhaka",
+  "gemma_url": "http://127.0.0.1:8080/v1/chat/completions",
+  "gemma_model": "gemma-4-26b-a4b-it",
+  "voice": "caro_davy",
+  "max_stories_per_topic": 6,
+  "candidates_per_feed": 8,
+  "hours_back": 36,
+  "feeds": {
+    "world": [
+      {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "source": "Al Jazeera",
+        "exclude_categories": [
+          "Opinions",
+          "Sport",
+          "Show Types"
+        ],
+        "path_contains": "/news/"
+      },
+      {
+        "url": "https://www.thedailystar.net/news/world/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "source": "BBC News"
+      },
+      {
+        "url": "https://www.theguardian.com/world/rss",
+        "source": "The Guardian"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "source": "Al Jazeera",
+        "exclude_categories": [
+          "Opinions",
+          "Sport",
+          "Show Types"
+        ],
+        "path_contains": "/economy/"
+      },
+      {
+        "url": "https://www.thedailystar.net/business/economy/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+        "source": "BBC News"
+      },
+      {
+        "url": "https://www.theguardian.com/business/rss",
+        "source": "The Guardian"
+      }
+    ],
+    "ai_technology": [
+      {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "source": "Al Jazeera",
+        "exclude_categories": [
+          "Opinions",
+          "Sport",
+          "Show Types"
+        ],
+        "keywords": [
+          "AI",
+          "artificial intelligence",
+          "technology",
+          "tech",
+          "digital"
+        ]
+      },
+      {
+        "url": "https://www.thedailystar.net/tech-startup/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "source": "BBC News"
+      },
+      {
+        "url": "https://www.theguardian.com/technology/rss",
+        "source": "The Guardian"
+      }
+    ],
+    "education": [
+      {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "source": "Al Jazeera",
+        "exclude_categories": [
+          "Opinions",
+          "Sport",
+          "Show Types"
+        ],
+        "keywords": [
+          "education",
+          "school",
+          "student",
+          "university",
+          "learning"
+        ]
+      },
+      {
+        "url": "https://www.thedailystar.net/youth/education/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://www.thedailystar.net/campus/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/education/rss.xml",
+        "source": "BBC News"
+      },
+      {
+        "url": "https://www.theguardian.com/education/rss",
+        "source": "The Guardian"
+      }
+    ],
+    "politics": [
+      {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "source": "Al Jazeera",
+        "exclude_categories": [
+          "Opinions",
+          "Sport",
+          "Show Types"
+        ],
+        "keywords": [
+          "election",
+          "government",
+          "parliament",
+          "president",
+          "prime minister",
+          "minister",
+          "party",
+          "protest"
+        ]
+      },
+      {
+        "url": "https://www.thedailystar.net/news/politics/rss.xml",
+        "source": "The Daily Star"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "source": "BBC News"
+      },
+      {
+        "url": "https://www.theguardian.com/politics/rss",
+        "source": "The Guardian"
+      }
+    ]
+  }
+}

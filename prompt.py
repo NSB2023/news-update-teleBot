@@ -1,4 +1,4 @@
-"""Editorial instructions and evidence formatting for Gemma news briefings."""
+"""Editorial instructions and evidence formatting for local news briefings."""
 
 
 TOPIC_PRIORITIES = {
@@ -30,7 +30,7 @@ TOPIC_PRIORITIES = {
 
 
 def build_selection_prompt(topic, candidates, limit, previously_selected_titles):
-    """Ask Gemma to select distinct, consequential events before articles are read."""
+    """Ask the local model to select distinct, consequential events before articles are read."""
     candidate_text = "\n\n".join(
         f"ID: {index}\nTITLE: {story['title']}\nPUBLISHED: {story['published']}\n"
         f"PUBLISHER: {story['source']}\nFEED EXCERPT: {story['summary'][:900]}"

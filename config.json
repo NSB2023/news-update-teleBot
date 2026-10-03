@@ -1,7 +1,7 @@
 {
   "timezone": "Asia/Dhaka",
-  "gemma_url": "http://127.0.0.1:8080/v1/chat/completions",
-  "gemma_model": "gemma-4-26b-a4b-it",
+  "ollama_url": "http://127.0.0.1:11434/api/chat",
+  "ollama_model": "qwen3.5:4b",
   "voice": "caro_davy",
   "max_stories_per_topic": 6,
   "candidates_per_feed": 8,

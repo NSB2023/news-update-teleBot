@@ -1,4 +1,4 @@
-"""Local RSS → Gemma → Pocket TTS → Telegram morning briefing."""
+"""Local RSS → Ollama → Pocket TTS → Telegram morning briefing."""
 
 import argparse
 import hashlib
@@ -96,45 +96,54 @@ def feed_items(feed, cutoff):
     return items
 
 
-def ask_gemma(cfg, topic, stories):
+def ask_ollama(cfg, prompt, *, timeout, num_predict, json_schema=None):
+    payload = {
+        "model": cfg["ollama_model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "think": False,
+        "keep_alive": "5m",
+        "options": {"temperature": 0.1 if json_schema else 0.2, "num_predict": num_predict},
+    }
+    if json_schema:
+        payload["format"] = json_schema
+    try:
+        response = requests.post(cfg["ollama_url"], json=payload, timeout=timeout)
+    except requests.ConnectionError:
+        raise RuntimeError(
+            f"Ollama is not reachable at {cfg['ollama_url']}. Start it with `ollama serve`."
+        ) from None
+    except requests.ReadTimeout:
+        raise RuntimeError(
+            f"Ollama exceeded the {timeout // 60}-minute timeout. Run the command again to resume."
+        ) from None
+    response.raise_for_status()
+    try:
+        content = response.json()["message"]["content"]
+    except (KeyError, TypeError, ValueError):
+        raise RuntimeError("Ollama returned an unexpected response") from None
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Ollama returned no text")
+    return content.strip()
+
+
+def ask_ollama_news(cfg, topic, stories):
     prompt = build_news_prompt(topic, stories)
     cache_dir = ROOT / "data" / "analysis-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     signature = hashlib.sha256(
-        (cfg["gemma_model"] + "\n" + prompt).encode("utf-8")
+        (cfg["ollama_model"] + "\n" + prompt).encode("utf-8")
     ).hexdigest()
     cache_path = cache_dir / f"{topic}.json"
     if cache_path.exists():
         try:
             cached = json.loads(cache_path.read_text())
             if cached.get("signature") == signature and cached.get("script"):
-                print(f"Using saved Gemma analysis for {topic}")
+                print(f"Using saved Ollama analysis for {topic}")
                 return cached["script"]
         except (json.JSONDecodeError, OSError):
             pass
-    payload = {
-        "model": cfg["gemma_model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2,
-        "max_completion_tokens": 1100,
-    }
-    try:
-        response = requests.post(cfg["gemma_url"], json=payload, timeout=1200)
-    except requests.ConnectionError:
-        raise RuntimeError(
-            f"Gemma server is not reachable at {cfg['gemma_url']}. "
-            "Start TurboFieldfareServer in another terminal, wait for 'ready', then retry."
-        ) from None
-    except requests.ReadTimeout:
-        raise RuntimeError(
-            f"Gemma took more than 20 minutes on {topic}. Completed topic analyses are saved; "
-            "run the same command again to resume."
-        ) from None
-    response.raise_for_status()
-    script = response.json()["choices"][0]["message"]["content"]
-    if not isinstance(script, str) or not script.strip():
-        raise ValueError(f"Gemma returned no text for {topic}")
-    script = script.strip()
+    script = ask_ollama(cfg, prompt, timeout=1200, num_predict=1100)
     temporary = cache_path.with_suffix(".tmp")
     temporary.write_text(json.dumps({"signature": signature, "script": script}, ensure_ascii=False))
     temporary.replace(cache_path)
@@ -148,18 +157,18 @@ def parse_json_object(text):
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.I)
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end < start:
-        raise ValueError("Gemma selection response did not contain JSON")
+        raise ValueError("Ollama selection response did not contain JSON")
     return json.loads(text[start : end + 1])
 
 
 def select_stories(cfg, topic, candidates, previously_selected_titles):
-    """Use Gemma as an editor to choose important, distinct candidate stories."""
+    """Use the local Ollama model to choose important, distinct candidate stories."""
     limit = cfg["max_stories_per_topic"]
     prompt = build_selection_prompt(topic, candidates, limit, previously_selected_titles)
     cache_dir = ROOT / "data" / "selection-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     signature = hashlib.sha256(
-        (cfg["gemma_model"] + "\n" + prompt).encode("utf-8")
+        (cfg["ollama_model"] + "\n" + prompt).encode("utf-8")
     ).hexdigest()
     cache_path = cache_dir / f"{topic}.json"
     selection = None
@@ -169,40 +178,40 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
             if cached.get("signature") == signature:
                 selection = cached.get("selected")
                 if selection:
-                    print(f"Using saved Gemma selection for {topic}")
+                    print(f"Using saved Ollama selection for {topic}")
         except (json.JSONDecodeError, OSError):
             pass
     if selection is None:
-        payload = {
-            "model": cfg["gemma_model"],
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "max_completion_tokens": 700,
+        schema = {
+            "type": "object",
+            "properties": {
+                "selected": {
+                    "type": "array",
+                    "maxItems": limit,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "reason": {"type": "string"},
+                        },
+                        "required": ["id", "reason"],
+                    },
+                }
+            },
+            "required": ["selected"],
         }
         try:
-            response = requests.post(cfg["gemma_url"], json=payload, timeout=600)
-        except requests.ConnectionError:
-            raise RuntimeError(
-                f"Gemma server is not reachable while selecting {topic} stories."
-            ) from None
-        except requests.ReadTimeout:
-            raise RuntimeError(
-                f"Gemma took more than 10 minutes selecting {topic} stories. "
-                "Run the same command again to retry."
-            ) from None
-        response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
-        try:
+            content = ask_ollama(cfg, prompt, timeout=600, num_predict=700, json_schema=schema)
             selection = parse_json_object(content).get("selected")
         except (json.JSONDecodeError, ValueError, AttributeError) as error:
-            raise RuntimeError(f"Gemma returned invalid selection JSON for {topic}: {error}") from None
+            raise RuntimeError(f"Ollama returned invalid selection JSON for {topic}: {error}") from None
         temporary = cache_path.with_suffix(".tmp")
         temporary.write_text(
             json.dumps({"signature": signature, "selected": selection}, ensure_ascii=False, indent=2)
         )
         temporary.replace(cache_path)
     if not isinstance(selection, list):
-        raise RuntimeError(f"Gemma selection for {topic} is not a list")
+        raise RuntimeError(f"Ollama selection for {topic} is not a list")
     chosen = []
     audit = []
     seen_ids = set()
@@ -224,7 +233,7 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
         if len(chosen) >= limit:
             break
     if not chosen:
-        raise RuntimeError(f"Gemma did not select any valid {topic} stories")
+        raise RuntimeError(f"Ollama did not select any valid {topic} stories")
     return chosen, audit
 
 
@@ -260,14 +269,13 @@ def prepare(refresh=False):
     from pocket_tts import TTSModel
 
     cfg = config()
-    health_url = cfg["gemma_url"].split("/v1/", 1)[0] + "/health"
+    health_url = cfg["ollama_url"].split("/api/", 1)[0] + "/api/tags"
     try:
         health = requests.get(health_url, timeout=5)
         health.raise_for_status()
     except requests.RequestException:
         raise RuntimeError(
-            f"Gemma server is not ready at {health_url}. Start TurboFieldfareServer "
-            "in another terminal and wait for its 'ready' message."
+            f"Ollama is not ready at {health_url}. Start it with `ollama serve`."
         ) from None
     today = datetime.now(ZoneInfo(cfg["timezone"])).date().isoformat()
     folder = ROOT / "output" / today
@@ -318,7 +326,7 @@ def prepare(refresh=False):
             story["evidence"] = article or story["summary"]
             story["evidence_type"] = "article text" if article else "feed excerpt only"
         print(f"Analyzing {topic}: {len(stories)} stories")
-        script = ask_gemma(cfg, topic, stories)
+        script = ask_ollama_news(cfg, topic, stories)
         sections.append((topic, spoken_text(script)))
         report.append(f"## {topic.replace('_', ' ').title()}\n\n{script}\n")
         report.extend(f"- [{s['title']}]({s['url']}) — {s['source']}; {s['published'] or 'date unavailable'}" for s in stories)

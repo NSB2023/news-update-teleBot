@@ -1,7 +1,5 @@
-"""Prepare the briefing, deliver at 08:00, and manage only our own Gemma server."""
+"""Prepare the briefing, deliver at 08:00, and manage a local Ollama server."""
 
-import platform
-import re
 import shutil
 import subprocess
 import time
@@ -14,65 +12,55 @@ import requests
 from main import config, prepare, send
 
 
-GEMMA = Path("/Users/nazmussakib/Downloads/Work/Gemma_AI_Turbo/turbo-fieldfare")
-SERVER = GEMMA / ".build/release/TurboFieldfareServer"
-MODEL = GEMMA / "scratch/gemma4.gturbo"
-PROCESS_PATTERN = (
-    "TurboFieldfareServer|TurboFieldfareMac|TurboFieldfareDecodeService|"
-    "TurboFieldfareCLI|TurboFieldfarePackageTests|swiftpm-testing-helper|mlx_lm|mlx-lm"
-)
-
-
-def server_ready(url):
+def installed_models(url):
     try:
-        return requests.get(url, timeout=3).ok
-    except requests.RequestException:
-        return False
-
-
-def start_if_needed(health_url):
-    if server_ready(health_url):
-        print("Using existing Gemma server", flush=True)
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return {item["name"] for item in response.json().get("models", [])}
+    except (requests.RequestException, KeyError, TypeError, ValueError):
         return None
-    processes = subprocess.run(["pgrep", "-fl", PROCESS_PATTERN], capture_output=True, text=True)
-    if processes.stdout.strip():
-        raise RuntimeError("Another model process is running; stop it yourself before the next scheduled run:\n" + processes.stdout)
-    if int(platform.mac_ver()[0].split(".")[0]) < 26:
-        raise RuntimeError("TurboFieldfare requires macOS 26 or newer")
-    swift = subprocess.run(["swift", "--version"], capture_output=True, text=True, check=True)
-    version = re.search(r"Swift version (\d+)\.(\d+)", swift.stdout)
-    if not version or tuple(map(int, version.groups())) < (6, 2):
-        raise RuntimeError("TurboFieldfare requires Swift 6.2 or newer")
-    if not (SERVER.is_file() and (MODEL / "manifest.json").is_file()):
-        raise RuntimeError("Gemma server binary or completed model is missing")
-    if shutil.disk_usage(GEMMA).free < 2 * 1024**3:
-        raise RuntimeError("Less than 2 GB free disk space")
-    pressure = subprocess.run(["memory_pressure", "-Q"], capture_output=True, text=True, check=True)
-    print(pressure.stdout.strip(), flush=True)
-    if "System-wide free percentage:" in pressure.stdout:
-        match = re.search(r"System-wide free percentage:\s*(\d+)%", pressure.stdout)
-        if match and int(match.group(1)) < 10:
-            raise RuntimeError("Memory pressure is high; skipping model startup")
-    print("Starting Gemma server", flush=True)
-    process = subprocess.Popen(
-        [str(SERVER), "--model", str(MODEL), "--port", "8080", "--max-context", "16384"],
-        cwd=GEMMA,
-    )
-    for _ in range(120):
-        if server_ready(health_url):
-            print("Gemma server ready", flush=True)
-            return process
-        if process.poll() is not None:
-            raise RuntimeError(f"Gemma server exited with code {process.returncode}")
-        time.sleep(1)
-    process.terminate()
-    raise RuntimeError("Gemma server did not become ready within 2 minutes")
+
+
+def ollama_binary():
+    found = shutil.which("ollama")
+    if found:
+        return found
+    for candidate in (Path("/opt/homebrew/bin/ollama"), Path("/usr/local/bin/ollama")):
+        if candidate.is_file():
+            return str(candidate)
+    raise RuntimeError("Ollama command not found. Install Ollama or add its binary path to daily.py")
+
+
+def start_if_needed(cfg):
+    tags_url = cfg["ollama_url"].split("/api/", 1)[0] + "/api/tags"
+    models = installed_models(tags_url)
+    process = None
+    if models is None:
+        print("Starting Ollama", flush=True)
+        process = subprocess.Popen([ollama_binary(), "serve"])
+        for _ in range(60):
+            models = installed_models(tags_url)
+            if models is not None:
+                break
+            if process.poll() is not None:
+                raise RuntimeError(f"Ollama exited with code {process.returncode}")
+            time.sleep(1)
+        else:
+            process.terminate()
+            raise RuntimeError("Ollama did not become ready within one minute")
+    else:
+        print("Using existing Ollama server", flush=True)
+    wanted = cfg["ollama_model"]
+    if wanted not in models:
+        if process is not None:
+            process.terminate()
+        raise RuntimeError(f"Ollama model {wanted!r} is not installed. Run: ollama pull {wanted}")
+    return process
 
 
 def main():
     cfg = config()
-    health_url = cfg["gemma_url"].split("/v1/", 1)[0] + "/health"
-    owned_server = start_if_needed(health_url)
+    owned_server = start_if_needed(cfg)
     try:
         prepare()
         local_now = datetime.now(ZoneInfo(cfg["timezone"]))

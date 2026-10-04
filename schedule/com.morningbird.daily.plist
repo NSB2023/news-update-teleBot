@@ -8,7 +8,7 @@
     <string>/Users/nazmussakib/Downloads/news-update-teleBot/daily.py</string>
   </array>
   <key>WorkingDirectory</key><string>/Users/nazmussakib/Downloads/news-update-teleBot</string>
-  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>15</integer></dict>
+  <key>StartInterval</key><integer>900</integer>
   <key>StandardOutPath</key><string>/Users/nazmussakib/Downloads/news-update-teleBot/data/daily.log</string>
   <key>StandardErrorPath</key><string>/Users/nazmussakib/Downloads/news-update-teleBot/data/daily-error.log</string>
 </dict></plist>

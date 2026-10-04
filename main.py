@@ -6,9 +6,8 @@ import html
 import json
 import os
 import re
-import sqlite3
 import sys
-import wave
+import time
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -18,6 +17,9 @@ from xml.etree import ElementTree as ET
 import requests
 from article import article_text
 from prompt import build_news_prompt, build_selection_prompt
+from speech import encode_telegram_voice, save_chunked_wav
+from storage import connect as storage_connect
+from storage import clear_edition_articles, mark_topic_delivered, save_article, save_run
 
 
 ROOT = Path(__file__).resolve().parent
@@ -40,14 +42,32 @@ def config():
 
 
 def database():
-    STATE.parent.mkdir(exist_ok=True)
-    db = sqlite3.connect(STATE)
-    db.execute("CREATE TABLE IF NOT EXISTS sent (path TEXT PRIMARY KEY, sent_at TEXT NOT NULL)")
-    return db
+    return storage_connect(STATE)
 
 
 def clean(value):
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", value or ""))).strip()
+
+
+def normalized_title(value):
+    words = re.findall(r"[a-z0-9]+", value.lower())
+    ignored = {"a", "an", "and", "at", "for", "from", "in", "of", "on", "the", "to", "with"}
+    return " ".join(word for word in words if word not in ignored)
+
+
+def same_event(first, second):
+    left, right = set(normalized_title(first).split()), set(normalized_title(second).split())
+    return bool(left and right) and len(left & right) / len(left | right) >= 0.58
+
+
+def opinion_item(title, link, categories):
+    labels = " ".join(categories).lower()
+    path = urlparse(link).path.lower()
+    return (
+        "opinion" in labels
+        or "/opinion/" in path
+        or bool(re.match(r"^(opinion|comment|editorial)\s*[:|—-]", title, re.I))
+    )
 
 
 def child_text(node, names):
@@ -84,7 +104,10 @@ def feed_items(feed, cutoff):
         summary = clean(child_text(node, {"encoded"}) or child_text(node, {"description", "summary"}))
         if title and link and urlparse(link).scheme in {"http", "https"}:
             categories = [clean("".join(c.itertext())) for c in node if c.tag.split("}")[-1].lower() == "category"]
-            if any(category in feed.get("exclude_categories", []) for category in categories):
+            excluded = {category.lower() for category in feed.get("exclude_categories", [])}
+            if any(category.lower() in excluded for category in categories):
+                continue
+            if opinion_item(title, link, categories):
                 continue
             if feed.get("path_contains") and feed["path_contains"] not in urlparse(link).path:
                 continue
@@ -92,7 +115,11 @@ def feed_items(feed, cutoff):
                 if not any(re.search(r"\b" + re.escape(word) + r"\b", title, re.I) for word in feed["keywords"]):
                     continue
             source = feed["source"]
-            items.append({"title": title, "url": link, "summary": summary[:5000], "published": published, "when": when, "source": source})
+            items.append({
+                "title": title, "normalized_title": normalized_title(title), "url": link,
+                "summary": summary[:5000], "published": published, "when": when,
+                "source": source, "content_type": "reporting",
+            })
     return items
 
 
@@ -107,43 +134,102 @@ def ask_ollama(cfg, prompt, *, timeout, num_predict, json_schema=None):
     }
     if json_schema:
         payload["format"] = json_schema
-    try:
-        response = requests.post(cfg["ollama_url"], json=payload, timeout=timeout)
-    except requests.ConnectionError:
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = requests.post(cfg["ollama_url"], json=payload, timeout=timeout)
+            response.raise_for_status()
+            content = response.json()["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("Ollama returned no text")
+            return content.strip()
+        except (requests.RequestException, KeyError, TypeError, ValueError) as error:
+            last_error = error
+            if attempt == 0:
+                print("Ollama request failed; retrying once", file=sys.stderr, flush=True)
+                time.sleep(2)
+    if isinstance(last_error, requests.ConnectionError):
         raise RuntimeError(
             f"Ollama is not reachable at {cfg['ollama_url']}. Start it with `ollama serve`."
         ) from None
-    except requests.ReadTimeout:
-        raise RuntimeError(
-            f"Ollama exceeded the {timeout // 60}-minute timeout. Run the command again to resume."
-        ) from None
-    response.raise_for_status()
-    try:
-        content = response.json()["message"]["content"]
-    except (KeyError, TypeError, ValueError):
-        raise RuntimeError("Ollama returned an unexpected response") from None
-    if not isinstance(content, str) or not content.strip():
-        raise RuntimeError("Ollama returned no text")
-    return content.strip()
+    if isinstance(last_error, requests.ReadTimeout):
+        raise RuntimeError(f"Ollama exceeded the {timeout // 60}-minute timeout after one retry") from None
+    raise RuntimeError(f"Ollama request failed after one retry: {last_error}") from None
+
+
+def valid_news_script(script, story_count):
+    numbered_points = re.findall(r"(?m)^\s*\d+[.)]\s+", script)
+    return len(numbered_points) >= story_count and len(script.split()) >= story_count * 35
 
 
 def ask_ollama_news(cfg, topic, stories):
-    prompt = build_news_prompt(topic, stories)
+    prompts = [
+        build_news_prompt(topic, [story]) + (
+            "\n\nReturn JSON only with this structure: "
+            '{"points":[{"text":"complete factual narration for this article"}]}. '
+            "Return exactly one detailed point."
+        )
+        for story in stories
+    ]
     cache_dir = ROOT / "data" / "analysis-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     signature = hashlib.sha256(
-        (cfg["ollama_model"] + "\n" + prompt).encode("utf-8")
+        (cfg["ollama_model"] + "\nsingle-article-json-v1\n" + "\n".join(prompts)).encode("utf-8")
     ).hexdigest()
     cache_path = cache_dir / f"{topic}.json"
     if cache_path.exists():
         try:
             cached = json.loads(cache_path.read_text())
-            if cached.get("signature") == signature and cached.get("script"):
+            if (
+                cached.get("signature") == signature
+                and cached.get("script")
+                and valid_news_script(cached["script"], len(stories))
+            ):
                 print(f"Using saved Ollama analysis for {topic}")
                 return cached["script"]
         except (json.JSONDecodeError, OSError):
             pass
-    script = ask_ollama(cfg, prompt, timeout=1200, num_predict=1100)
+    schema = {
+        "type": "object",
+        "properties": {
+            "points": {
+                "type": "array", "minItems": 1, "maxItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}},
+                    "required": ["text"],
+                },
+            }
+        },
+        "required": ["points"],
+    }
+    summaries = []
+    for article_index, prompt in enumerate(prompts, 1):
+        summary = ""
+        for attempt in range(2):
+            request_prompt = prompt
+            if attempt:
+                request_prompt += "\n\nThe previous response was incomplete. Return one detailed factual point."
+            content = ask_ollama(
+                cfg, request_prompt, timeout=180, num_predict=300, json_schema=schema
+            )
+            try:
+                points = parse_json_object(content).get("points", [])
+                if len(points) == 1 and isinstance(points[0], dict):
+                    candidate = points[0].get("text", "").strip()
+                    if len(candidate.split()) >= 35:
+                        summary = candidate
+                        break
+            except (json.JSONDecodeError, ValueError, AttributeError):
+                pass
+            if attempt == 0:
+                print(f"Incomplete {topic} article {article_index}; retrying once", file=sys.stderr)
+        if not summary:
+            raise RuntimeError(
+                f"Ollama returned an incomplete {topic} summary for article {article_index} after one retry"
+            )
+        summaries.append(summary)
+    script = "\n\n".join(f"{index}. {text}" for index, text in enumerate(summaries, 1))
     temporary = cache_path.with_suffix(".tmp")
     temporary.write_text(json.dumps({"signature": signature, "script": script}, ensure_ascii=False))
     temporary.replace(cache_path)
@@ -164,7 +250,8 @@ def parse_json_object(text):
 def select_stories(cfg, topic, candidates, previously_selected_titles):
     """Use the local Ollama model to choose important, distinct candidate stories."""
     limit = cfg["max_stories_per_topic"]
-    prompt = build_selection_prompt(topic, candidates, limit, previously_selected_titles)
+    selection_limit = min(len(candidates), limit + cfg.get("selection_backup_count", 4))
+    prompt = build_selection_prompt(topic, candidates, selection_limit, previously_selected_titles)
     cache_dir = ROOT / "data" / "selection-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     signature = hashlib.sha256(
@@ -187,7 +274,7 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
             "properties": {
                 "selected": {
                     "type": "array",
-                    "maxItems": limit,
+                    "maxItems": selection_limit,
                     "items": {
                         "type": "object",
                         "properties": {
@@ -200,11 +287,20 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
             },
             "required": ["selected"],
         }
-        try:
+        parse_error = None
+        for attempt in range(2):
             content = ask_ollama(cfg, prompt, timeout=600, num_predict=700, json_schema=schema)
-            selection = parse_json_object(content).get("selected")
-        except (json.JSONDecodeError, ValueError, AttributeError) as error:
-            raise RuntimeError(f"Ollama returned invalid selection JSON for {topic}: {error}") from None
+            try:
+                selection = parse_json_object(content).get("selected")
+                if not isinstance(selection, list):
+                    raise ValueError("selected is not a list")
+                break
+            except (json.JSONDecodeError, ValueError, AttributeError) as error:
+                parse_error = error
+                if attempt == 0:
+                    print(f"Invalid {topic} selection; retrying once", file=sys.stderr)
+        if selection is None:
+            raise RuntimeError(f"Ollama returned invalid selection JSON for {topic}: {parse_error}")
         temporary = cache_path.with_suffix(".tmp")
         temporary.write_text(
             json.dumps({"signature": signature, "selected": selection}, ensure_ascii=False, indent=2)
@@ -215,6 +311,8 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
     chosen = []
     audit = []
     seen_ids = set()
+    publisher_counts = {}
+    publisher_limit = cfg.get("max_stories_per_publisher", 2)
     for item in selection:
         if not isinstance(item, dict) or not isinstance(item.get("id"), int):
             continue
@@ -223,14 +321,19 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
             continue
         seen_ids.add(candidate_id)
         story = candidates[candidate_id - 1]
+        if publisher_counts.get(story["source"], 0) >= publisher_limit:
+            continue
+        if any(same_event(story["title"], existing["title"]) for existing in chosen):
+            continue
         chosen.append(story)
+        publisher_counts[story["source"]] = publisher_counts.get(story["source"], 0) + 1
         audit.append({
             "title": story["title"],
             "publisher": story["source"],
             "url": story["url"],
             "reason": str(item.get("reason", "")),
         })
-        if len(chosen) >= limit:
+        if len(chosen) >= selection_limit:
             break
     if not chosen:
         raise RuntimeError(f"Ollama did not select any valid {topic} stories")
@@ -251,24 +354,41 @@ def spoken_text(section):
     return re.sub(r"\s+", " ", section).strip()
 
 
-def save_audio(model, voice_state, script, path):
-    audio = model.generate_audio(voice_state, script)
-    samples = audio.detach().cpu().numpy()
-    import numpy as np
-
-    pcm = (np.clip(samples, -1, 1) * 32767).astype("<i2")
-    with wave.open(str(path), "wb") as wav:
-        wav.setnchannels(1)
-        wav.setsampwidth(2)
-        wav.setframerate(model.sample_rate)
-        wav.writeframes(pcm.tobytes())
+def save_audio(model, voice_state, script, path, cfg=None):
+    """Compatibility wrapper used by voice-preview."""
+    settings = (cfg or {}).get("tts", {})
+    return save_chunked_wav(
+        model, voice_state, script, path,
+        max_words=settings.get("max_words_per_chunk", 16),
+        pause_ms=settings.get("pause_ms", 350),
+    )
 
 
-def prepare(refresh=False):
+def split_summary_points(script, count):
+    parts = re.split(r"(?m)^\s*\d+[.)]\s*", script.strip())
+    points = [part.strip() for part in parts if part.strip()]
+    if len(points) == count:
+        return points
+    return [script.strip()] * count
+
+
+def write_errors(folder, errors):
+    path = folder / "errors.md"
+    if not errors:
+        if path.exists():
+            path.unlink()
+        return
+    lines = ["# MorningBird errors", "", "Completed topics were preserved. The following problems occurred:", ""]
+    lines.extend(f"- **{item['stage']}** — {item['message']}" for item in errors)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def prepare(refresh=False, edition=None):
     from zoneinfo import ZoneInfo
     from pocket_tts import TTSModel
 
     cfg = config()
+    edition = edition or cfg.get("edition", "morning")
     health_url = cfg["ollama_url"].split("/api/", 1)[0] + "/api/tags"
     try:
         health = requests.get(health_url, timeout=5)
@@ -278,79 +398,150 @@ def prepare(refresh=False):
             f"Ollama is not ready at {health_url}. Start it with `ollama serve`."
         ) from None
     today = datetime.now(ZoneInfo(cfg["timezone"])).date().isoformat()
-    folder = ROOT / "output" / today
+    folder = ROOT / "output" / today / edition
     folder.mkdir(parents=True, exist_ok=True)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg["hours_back"])
-    target = folder / "daily_briefing.wav"
-    if target.exists() and not refresh:
-        print(f"Already prepared: {target.name}")
+    complete_marker = folder / "prepare.complete"
+    if complete_marker.exists() and not refresh:
+        print(f"Already prepared: {today} {edition}")
         return folder
-    report = [f"# Morning briefing — {today}\n"]
-    sections = []
+    if refresh:
+        complete_marker.unlink(missing_ok=True)
+        for old_file in folder.glob(f"{today}_{edition}_*"):
+            if old_file.is_file():
+                old_file.unlink()
+    report = [f"# {edition.title()} briefing — {today}\n"]
+    errors = []
+    completed_topics = []
     used_urls = set()
     used_titles = []
-    selection_audit = {}
+    selection_path = folder / "selection.json"
+    try:
+        selection_audit = json.loads(selection_path.read_text()) if selection_path.exists() and not refresh else {}
+    except (json.JSONDecodeError, OSError):
+        selection_audit = {}
+    db = database()
+    if refresh:
+        clear_edition_articles(db, today, edition)
+    model = None
+    voice_state = None
     for topic, feeds in cfg["feeds"].items():
-        candidates = []
-        for feed in feeds:
-            try:
-                candidates.extend(
-                    sorted(
-                        feed_items(feed, cutoff),
-                        key=lambda story: story["when"] or cutoff,
-                        reverse=True,
-                    )[: cfg["candidates_per_feed"]]
-                )
-            except (requests.RequestException, ET.ParseError) as error:
-                print(f"Feed failed ({feed['url']}): {error}", file=sys.stderr)
-        unique = {s["url"].split("?")[0]: s for s in candidates}
-        available = sorted(
-            (s for key, s in unique.items() if key not in used_urls),
-            key=lambda s: s["when"] or cutoff,
-            reverse=True,
-        )
-        if not available:
-            print(f"No recent {topic} stories; skipping.")
+        stem = f"{today}_{edition}_{topic}"
+        existing_voice = folder / f"{stem}.ogg"
+        existing_report = folder / f"{stem}.md"
+        if not refresh and existing_voice.exists() and existing_report.exists():
+            completed_topics.append(topic)
+            report.extend(existing_report.read_text().splitlines() + [""])
+            for item in selection_audit.get(topic, {}).get("selected", []):
+                used_urls.add(item.get("url", "").split("?")[0])
+                used_titles.append(item.get("title", ""))
+            print(f"Reusing completed topic: {topic}")
             continue
-        print(f"Selecting {topic} from {len(available)} candidates")
-        stories, audit = select_stories(cfg, topic, available, used_titles)
-        selection_audit[topic] = audit
-        used_urls.update(s["url"].split("?")[0] for s in stories)
-        used_titles.extend(s["title"] for s in stories)
-        for story in stories:
-            try:
-                article = article_text(story["url"])
-            except requests.RequestException as error:
-                print(f"Article unavailable ({story['url']}): {type(error).__name__}", file=sys.stderr)
-                article = ""
-            story["evidence"] = article or story["summary"]
-            story["evidence_type"] = "article text" if article else "feed excerpt only"
-        print(f"Analyzing {topic}: {len(stories)} stories")
-        script = ask_ollama_news(cfg, topic, stories)
-        sections.append((topic, spoken_text(script)))
-        report.append(f"## {topic.replace('_', ' ').title()}\n\n{script}\n")
-        report.extend(f"- [{s['title']}]({s['url']}) — {s['source']}; {s['published'] or 'date unavailable'}" for s in stories)
-        report.append("")
-    if not sections:
-        raise RuntimeError("No recent stories found in the configured feeds")
-    intro = f"Good morning. Here is your news briefing for {datetime.now(ZoneInfo(cfg['timezone'])):%A, %B %d}."
-    narration = "\n\n".join([intro] + [f"{topic.replace('_', ' ').title()}. {text}" for topic, text in sections])
-    (folder / "briefing.md").write_text("\n".join(report))
-    (folder / "narration.txt").write_text(narration)
-    (folder / "selection.json").write_text(
-        json.dumps(selection_audit, ensure_ascii=False, indent=2)
-    )
-    print(f"Narration: {len(narration.split())} words")
-    model = TTSModel.load_model()
-    voice_state = model.get_state_for_audio_prompt(cfg["voice"])
-    temp = target.with_suffix(".partial.wav")
-    save_audio(model, voice_state, narration, temp)
-    temp.replace(target)
-    with wave.open(str(target)) as wav:
-        duration = wav.getnframes() / wav.getframerate()
-    print(f"Created {target} ({duration / 60:.1f} minutes)")
-    if duration < 300:
-        print("Briefing is under 5 minutes; feed evidence or generated text was shorter than requested.", file=sys.stderr)
+        try:
+            candidates = []
+            for feed in feeds:
+                try:
+                    candidates.extend(
+                        sorted(feed_items(feed, cutoff), key=lambda story: story["when"] or cutoff, reverse=True)
+                        [: cfg["candidates_per_feed"]]
+                    )
+                except (requests.RequestException, ET.ParseError) as error:
+                    message = f"{feed['source']} feed failed for {topic}: {type(error).__name__}"
+                    print(message, file=sys.stderr)
+                    errors.append({"stage": f"feed/{topic}", "message": message})
+            unique = {story["url"].split("?")[0]: story for story in candidates}
+            available = sorted(
+                (
+                    story for key, story in unique.items()
+                    if key not in used_urls
+                    and not any(same_event(story["title"], title) for title in used_titles)
+                ),
+                key=lambda story: story["when"] or cutoff,
+                reverse=True,
+            )
+            for story in available:
+                save_article(db, story, topic=topic, briefing_date=today, edition=edition, status="candidate")
+            if not available:
+                raise RuntimeError("No recent, distinct reporting was available")
+            print(f"Selecting {topic} from {len(available)} candidates")
+            selected_pool, audit_pool = select_stories(cfg, topic, available, used_titles)
+            reason_by_url = {item["url"]: item["reason"] for item in audit_pool}
+            stories = []
+            rejected = []
+            for story in selected_pool:
+                try:
+                    article = article_text(story["url"])
+                except requests.RequestException as error:
+                    print(f"Article unavailable ({story['url']}): {type(error).__name__}", file=sys.stderr)
+                    article = ""
+                story["evidence"] = article or story["summary"]
+                story["evidence_type"] = "article text" if article else "feed excerpt only"
+                if len(story["evidence"].split()) < cfg.get("min_evidence_words", 60):
+                    rejected.append({"title": story["title"], "reason": "insufficient evidence"})
+                    save_article(db, story, topic=topic, briefing_date=today, edition=edition, status="rejected_insufficient_evidence")
+                    continue
+                stories.append(story)
+                if len(stories) >= cfg["max_stories_per_topic"]:
+                    break
+            if not stories:
+                raise RuntimeError("Selected stories did not contain enough extractable evidence")
+            audit = [
+                {
+                    "title": story["title"], "publisher": story["source"], "url": story["url"],
+                    "reason": reason_by_url.get(story["url"], "Selected as a qualified replacement"),
+                    "evidence_type": story["evidence_type"],
+                }
+                for story in stories
+            ]
+            selection_audit[topic] = {"selected": audit, "rejected": rejected}
+            used_urls.update(story["url"].split("?")[0] for story in stories)
+            used_titles.extend(story["title"] for story in stories)
+            print(f"Analyzing {topic}: {len(stories)} stories")
+            script = ask_ollama_news(cfg, topic, stories)
+            summaries = split_summary_points(script, len(stories))
+            for story, summary in zip(stories, summaries):
+                save_article(
+                    db, story, topic=topic, briefing_date=today, edition=edition,
+                    status="selected", summary=summary,
+                )
+            narration = f"{topic.replace('_', ' ').title()}. {spoken_text(script)}"
+            (folder / f"{stem}.txt").write_text(narration)
+            topic_report = [f"# {topic.replace('_', ' ').title()} — {today} ({edition})", "", script, "", "## Sources", ""]
+            topic_report.extend(
+                f"- [{story['title']}]({story['url']}) — {story['source']}; "
+                f"{story['published'] or 'date unavailable'}; {story['evidence_type']}"
+                for story in stories
+            )
+            (folder / f"{stem}.md").write_text("\n".join(topic_report) + "\n")
+            if model is None:
+                model = TTSModel.load_model()
+                voice_state = model.get_state_for_audio_prompt(cfg["voice"])
+            wav_path = folder / f"{stem}.wav"
+            duration, chunks = save_audio(model, voice_state, narration, wav_path, cfg)
+            ogg_path = folder / f"{stem}.ogg"
+            encode_telegram_voice(wav_path, ogg_path, cfg.get("tts", {}).get("ffmpeg_path", ""))
+            completed_topics.append(topic)
+            report.extend(topic_report + [""])
+            print(f"Created {ogg_path.name} ({duration / 60:.1f} minutes, {chunks} speech chunks)")
+        except Exception as error:
+            message = f"{type(error).__name__}: {error}"
+            print(f"{topic} failed: {message}", file=sys.stderr)
+            errors.append({"stage": f"topic/{topic}", "message": message})
+        finally:
+            write_errors(folder, errors)
+            (folder / "selection.json").write_text(json.dumps(selection_audit, ensure_ascii=False, indent=2))
+            (folder / "briefing.md").write_text("\n".join(report))
+    status = "success" if completed_topics and not errors else "partial" if completed_topics else "failed"
+    save_run(db, today, edition, status, len(errors))
+    db.close()
+    manifest = {
+        "date": today, "edition": edition, "status": status,
+        "completed_topics": completed_topics, "error_count": len(errors),
+    }
+    (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    if not completed_topics:
+        raise RuntimeError(f"No topics completed; see {folder / 'errors.md'}")
+    complete_marker.write_text(datetime.now(timezone.utc).isoformat())
     return folder
 
 
@@ -383,7 +574,7 @@ def find_chat():
     print(f"Most recent chat ID: {ids[-1]}")
 
 
-def send():
+def send(edition=None):
     from zoneinfo import ZoneInfo
 
     read_env()
@@ -392,36 +583,57 @@ def send():
     if not token or not chat_id:
         raise ValueError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env")
     cfg = config()
-    folder = ROOT / "output" / datetime.now(ZoneInfo(cfg["timezone"])).date().isoformat()
-    files = [folder / "daily_briefing.wav"] if (folder / "daily_briefing.wav").exists() else []
+    edition = edition or cfg.get("edition", "morning")
+    briefing_date = datetime.now(ZoneInfo(cfg["timezone"])).date().isoformat()
+    folder = ROOT / "output" / briefing_date / edition
+    files = sorted(folder.glob(f"{briefing_date}_{edition}_*.ogg"))
     if not files:
-        raise FileNotFoundError(f"No prepared WAV files in {folder}; run prepare first")
+        raise FileNotFoundError(f"No prepared OGG/Opus topic files in {folder}; run prepare first")
     db = database()
     for path in files:
+        topic = path.stem.removeprefix(f"{briefing_date}_{edition}_")
         audio_key = f"{path}:{hashlib.sha256(path.read_bytes()).hexdigest()}"
         if db.execute("SELECT 1 FROM sent WHERE path=?", (audio_key,)).fetchone():
             print(f"Already sent: {path.name}")
             continue
         with path.open("rb") as stream:
-            telegram_call("sendDocument", token, data={"chat_id": chat_id, "caption": f"MorningBird: {path.stem.replace('_', ' ').title()} — {folder.name}"}, files={"document": (path.name, stream, "audio/wav")})
+            telegram_call(
+                "sendVoice", token,
+                data={
+                    "chat_id": chat_id,
+                    "caption": f"MorningBird • {briefing_date} • {edition.title()} • {topic.replace('_', ' ').title()}",
+                },
+                files={"voice": (path.name, stream, "audio/ogg")},
+            )
         db.execute("INSERT INTO sent VALUES (?, ?)", (audio_key, datetime.now(timezone.utc).isoformat()))
         db.commit()
+        mark_topic_delivered(db, briefing_date, edition, topic)
         print(f"Sent {path.name}")
-    report = folder / "briefing.md"
-    report_key = f"{report}:{hashlib.sha256(report.read_bytes()).hexdigest()}" if report.exists() else ""
-    if report.exists() and not db.execute("SELECT 1 FROM sent WHERE path=?", (report_key,)).fetchone():
-        with report.open("rb") as stream:
-            telegram_call("sendDocument", token, data={"chat_id": chat_id, "caption": "Sources and written briefing"}, files={"document": (report.name, stream, "text/markdown")})
-        db.execute("INSERT INTO sent VALUES (?, ?)", (report_key, datetime.now(timezone.utc).isoformat()))
-        db.commit()
-        print("Sent briefing.md")
+    for report, caption in (
+        (folder / "briefing.md", f"MorningBird sources — {briefing_date} {edition}"),
+        (folder / "errors.md", f"MorningBird processing notes — {briefing_date} {edition}"),
+    ):
+        report_key = f"{report}:{hashlib.sha256(report.read_bytes()).hexdigest()}" if report.exists() else ""
+        if report.exists() and not db.execute("SELECT 1 FROM sent WHERE path=?", (report_key,)).fetchone():
+            with report.open("rb") as stream:
+                telegram_call(
+                    "sendDocument", token, data={"chat_id": chat_id, "caption": caption},
+                    files={"document": (report.name, stream, "text/markdown")},
+                )
+            db.execute("INSERT INTO sent VALUES (?, ?)", (report_key, datetime.now(timezone.utc).isoformat()))
+            db.commit()
+            print(f"Sent {report.name}")
+    manifest = json.loads((folder / "manifest.json").read_text())
+    save_run(db, briefing_date, edition, "delivered", manifest.get("error_count", 0))
     db.close()
+    (folder / "delivery.complete").write_text(datetime.now(timezone.utc).isoformat())
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["prepare", "send", "run", "chat-id", "sources", "voice-preview"])
     parser.add_argument("--refresh", action="store_true", help="Regenerate today's briefing even if it exists")
+    parser.add_argument("--edition", choices=["morning", "afternoon"], help="Override the configured edition")
     args = parser.parse_args()
     if args.command == "chat-id":
         find_chat()
@@ -440,15 +652,15 @@ def main():
         for voice_name in ("alba", "marius", "caro_davy"):
             voice_state = model.get_state_for_audio_prompt(voice_name)
             path = folder / f"{voice_name}.wav"
-            save_audio(model, voice_state, sample, path)
+            save_audio(model, voice_state, sample, path, config())
             print(path)
     elif args.command == "prepare":
-        prepare(refresh=args.refresh)
+        prepare(refresh=args.refresh, edition=args.edition)
     elif args.command == "send":
-        send()
+        send(edition=args.edition)
     else:
-        prepare(refresh=args.refresh)
-        send()
+        prepare(refresh=args.refresh, edition=args.edition)
+        send(edition=args.edition)
 
 
 if __name__ == "__main__":

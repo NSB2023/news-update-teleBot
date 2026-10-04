@@ -3,9 +3,19 @@
   "ollama_url": "http://127.0.0.1:11434/api/chat",
   "ollama_model": "qwen3.5:4b",
   "voice": "caro_davy",
+  "edition": "morning",
+  "start_time": "07:40",
   "max_stories_per_topic": 6,
+  "max_stories_per_publisher": 2,
+  "selection_backup_count": 4,
   "candidates_per_feed": 8,
   "hours_back": 36,
+  "min_evidence_words": 60,
+  "tts": {
+    "max_words_per_chunk": 16,
+    "pause_ms": 350,
+    "ffmpeg_path": "/opt/homebrew/bin/ffmpeg"
+  },
   "feeds": {
     "world": [
       {

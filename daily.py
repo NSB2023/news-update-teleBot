@@ -1,4 +1,4 @@
-"""Prepare the briefing, deliver at 08:00, and manage a local Ollama server."""
+"""Run a configured MorningBird edition when it becomes due."""
 
 import shutil
 import subprocess
@@ -60,16 +60,20 @@ def start_if_needed(cfg):
 
 def main():
     cfg = config()
+    edition = cfg.get("edition", "morning")
+    local_now = datetime.now(ZoneInfo(cfg["timezone"]))
+    start_time = datetime.strptime(cfg.get("start_time", "07:40"), "%H:%M").time()
+    folder = Path(__file__).resolve().parent / "output" / local_now.date().isoformat() / edition
+    if local_now.time() < start_time:
+        print(f"{edition.title()} briefing is not due until {start_time:%H:%M}", flush=True)
+        return
+    if (folder / "delivery.complete").exists():
+        print(f"{edition.title()} briefing already delivered for {local_now.date()}", flush=True)
+        return
     owned_server = start_if_needed(cfg)
     try:
-        prepare()
-        local_now = datetime.now(ZoneInfo(cfg["timezone"]))
-        target = local_now.replace(hour=8, minute=0, second=0, microsecond=0)
-        if local_now < target:
-            seconds = (target - local_now).total_seconds()
-            print(f"Briefing ready; waiting {seconds:.0f}s until 08:00", flush=True)
-            time.sleep(seconds)
-        send()
+        prepare(edition=edition)
+        send(edition=edition)
     finally:
         if owned_server is not None and owned_server.poll() is None:
             owned_server.terminate()

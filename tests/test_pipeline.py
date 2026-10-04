@@ -37,6 +37,18 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(ask.call_count, 2)
         self.assertLessEqual(sum(story["source"] == "One" for story in selected), 2)
 
+    def test_selection_falls_back_after_two_invalid_responses(self):
+        candidates = [
+            {"title": f"Event {i}", "url": f"https://example.com/{i}", "source": f"Publisher {i}", "published": "today", "summary": "Reported development", "when": None}
+            for i in range(1, 4)
+        ]
+        cfg = {"max_stories_per_topic": 2, "selection_backup_count": 0, "max_stories_per_publisher": 2, "ollama_model": "test"}
+        with tempfile.TemporaryDirectory() as temp, patch.object(main, "ROOT", Path(temp)), patch.object(main, "ask_ollama", return_value="broken") as ask:
+            selected, audit = main.select_stories(cfg, "world", candidates, [])
+        self.assertEqual(ask.call_count, 2)
+        self.assertEqual(len(selected), 2)
+        self.assertTrue(all("fallback" in item["reason"].lower() for item in audit))
+
     def test_sqlite_stores_article_history(self):
         with tempfile.TemporaryDirectory() as temp:
             db = connect(Path(temp) / "state.sqlite")

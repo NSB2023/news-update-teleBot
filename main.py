@@ -60,6 +60,38 @@ def same_event(first, second):
     return bool(left and right) and len(left & right) / len(left | right) >= 0.58
 
 
+def south_asia_story(story):
+    text = f"{story.get('title', '')} {story.get('summary', '')}".lower()
+    places = (
+        "bangladesh", "bangladeshi", "dhaka", "south asia", "india", "indian",
+        "pakistan", "pakistani", "nepal", "nepali", "sri lanka", "sri lankan",
+        "bhutan", "maldives", "afghanistan",
+    )
+    return any(place in text for place in places)
+
+
+def fallback_selection(candidates, limit, publisher_limit):
+    """Choose a diverse recent set when structured model output remains invalid."""
+    ordered = sorted(
+        enumerate(candidates, 1),
+        key=lambda pair: (not south_asia_story(pair[1]), -(pair[1]["when"].timestamp() if pair[1].get("when") else 0)),
+    )
+    selected = []
+    publishers = {}
+    titles = []
+    for candidate_id, story in ordered:
+        if publishers.get(story["source"], 0) >= publisher_limit:
+            continue
+        if any(same_event(story["title"], title) for title in titles):
+            continue
+        selected.append({"id": candidate_id, "reason": "Deterministic fallback after invalid model selection"})
+        publishers[story["source"]] = publishers.get(story["source"], 0) + 1
+        titles.append(story["title"])
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def opinion_item(title, link, categories):
     labels = " ".join(categories).lower()
     path = urlparse(link).path.lower()
@@ -300,7 +332,14 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
                 if attempt == 0:
                     print(f"Invalid {topic} selection; retrying once", file=sys.stderr)
         if selection is None:
-            raise RuntimeError(f"Ollama returned invalid selection JSON for {topic}: {parse_error}")
+            print(
+                f"Ollama returned invalid selection JSON for {topic} after one retry; "
+                "using deterministic fallback",
+                file=sys.stderr,
+            )
+            selection = fallback_selection(
+                candidates, selection_limit, cfg.get("max_stories_per_publisher", 2)
+            )
         temporary = cache_path.with_suffix(".tmp")
         temporary.write_text(
             json.dumps({"signature": signature, "selected": selection}, ensure_ascii=False, indent=2)
@@ -403,8 +442,14 @@ def prepare(refresh=False, edition=None):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=cfg["hours_back"])
     complete_marker = folder / "prepare.complete"
     if complete_marker.exists() and not refresh:
-        print(f"Already prepared: {today} {edition}")
-        return folder
+        try:
+            previous_status = json.loads((folder / "manifest.json").read_text()).get("status")
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            previous_status = None
+        if previous_status == "success":
+            print(f"Already prepared: {today} {edition}")
+            return folder
+        complete_marker.unlink(missing_ok=True)
     if refresh:
         complete_marker.unlink(missing_ok=True)
         for old_file in folder.glob(f"{today}_{edition}_*"):
@@ -541,7 +586,10 @@ def prepare(refresh=False, edition=None):
     (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
     if not completed_topics:
         raise RuntimeError(f"No topics completed; see {folder / 'errors.md'}")
-    complete_marker.write_text(datetime.now(timezone.utc).isoformat())
+    if status == "success":
+        complete_marker.write_text(datetime.now(timezone.utc).isoformat())
+    else:
+        complete_marker.unlink(missing_ok=True)
     return folder
 
 

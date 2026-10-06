@@ -26,19 +26,23 @@
           "Sport",
           "Show Types"
         ],
-        "path_contains": "/news/"
+        "path_contains": "/news/",
+        "enabled": false
       },
       {
         "url": "https://www.thedailystar.net/news/world/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "source": "BBC News"
+        "source": "BBC News",
+        "enabled": true
       },
       {
         "url": "https://www.theguardian.com/world/rss",
-        "source": "The Guardian"
+        "source": "The Guardian",
+        "enabled": true
       }
     ],
     "economy": [
@@ -50,19 +54,23 @@
           "Sport",
           "Show Types"
         ],
-        "path_contains": "/economy/"
+        "path_contains": "/economy/",
+        "enabled": false
       },
       {
         "url": "https://www.thedailystar.net/business/economy/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
-        "source": "BBC News"
+        "source": "BBC News",
+        "enabled": true
       },
       {
         "url": "https://www.theguardian.com/business/rss",
-        "source": "The Guardian"
+        "source": "The Guardian",
+        "enabled": true
       }
     ],
     "ai_technology": [
@@ -80,19 +88,23 @@
           "technology",
           "tech",
           "digital"
-        ]
+        ],
+        "enabled": false
       },
       {
         "url": "https://www.thedailystar.net/tech-startup/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
-        "source": "BBC News"
+        "source": "BBC News",
+        "enabled": true
       },
       {
         "url": "https://www.theguardian.com/technology/rss",
-        "source": "The Guardian"
+        "source": "The Guardian",
+        "enabled": true
       }
     ],
     "education": [
@@ -110,23 +122,28 @@
           "student",
           "university",
           "learning"
-        ]
+        ],
+        "enabled": false
       },
       {
         "url": "https://www.thedailystar.net/youth/education/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://www.thedailystar.net/campus/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://feeds.bbci.co.uk/news/education/rss.xml",
-        "source": "BBC News"
+        "source": "BBC News",
+        "enabled": true
       },
       {
         "url": "https://www.theguardian.com/education/rss",
-        "source": "The Guardian"
+        "source": "The Guardian",
+        "enabled": true
       }
     ],
     "politics": [
@@ -147,20 +164,36 @@
           "minister",
           "party",
           "protest"
-        ]
+        ],
+        "enabled": false
       },
       {
         "url": "https://www.thedailystar.net/news/politics/rss.xml",
-        "source": "The Daily Star"
+        "source": "The Daily Star",
+        "enabled": true
       },
       {
         "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "source": "BBC News"
+        "source": "BBC News",
+        "enabled": true
       },
       {
         "url": "https://www.theguardian.com/politics/rss",
-        "source": "The Guardian"
+        "source": "The Guardian",
+        "enabled": true
       }
     ]
-  }
+  },
+  "home_country": "Bangladesh",
+  "regions": [
+    "South Asia",
+    "Global"
+  ],
+  "enabled_topics": [
+    "world",
+    "economy",
+    "ai_technology",
+    "education",
+    "politics"
+  ]
 }

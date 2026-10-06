@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MorningBird — The Editor's Desk</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="masthead">
+      <div class="masthead-top"><span>EST. FOR THE DAILY COMMUTE</span><span>PERSONAL EDITION · MAC</span><span id="today">YOUR MORNING PAPER</span></div>
+      <div class="brandline"><span class="brand-decoration">✦</span><div><div class="brand">MorningBird</div><div class="brand-kicker">YOUR WORLD, READ ALOUD.</div></div><span class="brand-decoration">✦</span></div>
+      <div class="masthead-bottom"><span>THE EDITOR'S DESK</span><span>MAKE THE NEWS YOURS</span><span>VOL. 01 · PERSONAL PRINT</span></div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-picture"></div>
+        <div class="hero-shade"></div>
+        <div class="hero-copy">
+          <div class="eyebrow light">A BETTER WAY TO BEGIN THE DAY <span class="rule"></span> 01 / 05</div>
+          <h1 id="hero-title">The morning<br><em>belongs to you.</em></h1>
+          <p>Curate the stories that matter. MorningBird turns the day's reporting into a thoughtful audio edition for the journey ahead.</p>
+          <a href="#preferences" class="hero-link">Set up your edition <span>↗</span></a>
+        </div>
+        <div class="hero-caption">THE COMMUTE, REIMAGINED&nbsp;&nbsp;·&nbsp;&nbsp;EDITORIAL ARTWORK</div>
+      </section>
+
+      <section class="news-wire" aria-labelledby="wire-title">
+        <div class="wire-heading"><span>FROM TODAY'S WIRES</span><span id="wire-title">CURRENT REPORTING · ORIGINAL PUBLISHERS</span></div>
+        <div id="wire-stories" class="wire-stories"><p class="wire-loading">Checking the news desks…</p></div>
+      </section>
+
+      <div class="content-grid" id="preferences">
+        <div class="main-column">
+          <div class="section-heading"><span class="section-number">01</span><div><div class="eyebrow">THE HOME EDITION</div><h2>Where is your world?</h2><p>Your home country and regions help the editor give relevant stories more attention.</p></div></div>
+          <div class="panel geography">
+            <div class="field"><label for="country">HOME COUNTRY</label><div class="select-wrap"><select id="country"></select></div></div>
+            <div class="field"><label>REGIONS TO FOLLOW</label><div id="regions" class="chips"></div></div>
+          </div>
+
+          <div class="section-heading"><span class="section-number">02</span><div><div class="eyebrow">THE NEWS DESK</div><h2>Choose your sections.</h2><p>A little of what matters, without the endless scroll.</p></div></div>
+          <div id="topics" class="topic-grid"></div>
+
+          <div class="section-heading"><span class="section-number">03</span><div><div class="eyebrow">THE SOURCES</div><h2>Who do you read?</h2><p>Choose the reporting you trust. Every audio story links back to its publisher.</p></div></div>
+          <div id="sources" class="source-panel"></div>
+
+          <div class="section-heading"><span class="section-number">04</span><div><div class="eyebrow">THE EDITION</div><h2>Make it yours.</h2><p>Set the size, timing, voice, and local model for your morning reading.</p></div></div>
+          <div class="panel settings-grid">
+            <div class="field"><label for="stories">STORIES PER SECTION</label><div class="stepper"><button type="button" id="minus" aria-label="Fewer stories">−</button><output id="stories">6</output><button type="button" id="plus" aria-label="More stories">+</button></div><small>Choose between 1 and 10.</small></div>
+            <div class="field"><label for="start-time">DELIVERY START TIME</label><input type="time" id="start-time"><small>Uses the timezone set in your configuration.</small></div>
+            <div class="field"><label for="voice">NARRATOR</label><div class="select-wrap"><select id="voice"></select></div><small>A familiar voice for the journey.</small></div>
+            <div class="field"><label for="model">LOCAL AI MODEL</label><div class="select-wrap"><select id="model"></select></div><small>Models installed in Ollama appear here.</small></div>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="aside-kicker">THE PERSONAL PAPER</div>
+          <div class="folio-card"><span>YOUR EDITION</span><strong id="folio-country">Bangladesh</strong><div class="folio-line"></div><p><b id="folio-topics">5</b> sections selected</p><p><b id="folio-sources">4</b> publishers on the desk</p><p>Ready from <b id="folio-time">07:40</b></p><div class="seal">MB<br><small>DAILY</small></div></div>
+          <div class="aside-note"><span class="eyebrow">EDITOR'S NOTE</span><p>Local AI reads, selects, and writes. You receive the audio and its source notes; the original reporting always stays one click away.</p></div>
+          <div class="aside-ornament">❧</div>
+        </aside>
+      </div>
+
+      <section class="save-section">
+        <div><div class="eyebrow">05 / FINAL PROOF</div><h2>Make it official.</h2><p>Save this edition to your Mac. Your next scheduled run will use these choices.</p></div>
+        <div class="save-actions"><button id="save" type="button">Save my edition <span>↗</span></button><div id="status" role="status" aria-live="polite"></div></div>
+      </section>
+    </main>
+    <footer><span>MorningBird © 2026</span><span>MADE FOR THE QUIET HOURS BETWEEN HERE AND THERE</span><span>LOCAL EDITION</span></footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

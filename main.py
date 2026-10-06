@@ -283,7 +283,11 @@ def select_stories(cfg, topic, candidates, previously_selected_titles):
     """Use the local Ollama model to choose important, distinct candidate stories."""
     limit = cfg["max_stories_per_topic"]
     selection_limit = min(len(candidates), limit + cfg.get("selection_backup_count", 4))
-    prompt = build_selection_prompt(topic, candidates, selection_limit, previously_selected_titles)
+    prompt = build_selection_prompt(
+        topic, candidates, selection_limit, previously_selected_titles,
+        home_country=cfg.get("home_country", "Bangladesh"),
+        regions=cfg.get("regions", ["South Asia", "Global"]),
+    )
     cache_dir = ROOT / "data" / "selection-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     signature = hashlib.sha256(
@@ -471,6 +475,8 @@ def prepare(refresh=False, edition=None):
     model = None
     voice_state = None
     for topic, feeds in cfg["feeds"].items():
+        if topic not in cfg.get("enabled_topics", cfg["feeds"].keys()):
+            continue
         stem = f"{today}_{edition}_{topic}"
         existing_voice = folder / f"{stem}.ogg"
         existing_report = folder / f"{stem}.md"
@@ -485,6 +491,8 @@ def prepare(refresh=False, edition=None):
         try:
             candidates = []
             for feed in feeds:
+                if feed.get("enabled", True) is False:
+                    continue
                 try:
                     candidates.extend(
                         sorted(feed_items(feed, cutoff), key=lambda story: story["when"] or cutoff, reverse=True)
@@ -686,9 +694,14 @@ def main():
     if args.command == "chat-id":
         find_chat()
     elif args.command == "sources":
-        for topic, feeds in config()["feeds"].items():
+        cfg = config()
+        for topic, feeds in cfg["feeds"].items():
+            if topic not in cfg.get("enabled_topics", cfg["feeds"].keys()):
+                continue
             print(f"{topic}:")
             for feed in feeds:
+                if feed.get("enabled", True) is False:
+                    continue
                 print(f"  {feed['source']}: {feed['url']}")
     elif args.command == "voice-preview":
         from pocket_tts import TTSModel

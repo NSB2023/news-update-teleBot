@@ -1,6 +1,12 @@
 # MorningBird
 
-Personal RSS news briefing: RSS content and excerpts → local Ollama Qwen → local Pocket TTS → one Telegram WAV file.
+Personal RSS news briefing: RSS content and excerpts → local Ollama Qwen → local Pocket TTS → Telegram OGG/Opus voice messages.
+
+## Configure in your browser
+
+Run `.venv/bin/python ui_server.py` from this folder. MorningBird opens its local settings desk at `http://127.0.0.1:8765`. Choose your home country, regions, news sections, publishers, stories per section, start time, narrator, and installed Ollama model, then click **Save my edition**. The page writes these choices to `config.json`; it does not run or send a briefing. Close the terminal or press Ctrl-C when finished. The page is only served on your Mac's loopback address.
+
+The page's large newspaper photograph is generated editorial artwork, not an image of a real current event. A small "From today's wires" strip shows current article images only when the configured publishers supply them in RSS; each image links to its report and names the publisher. Stories and source links in your actual briefing come from the configured RSS feeds. Country and region choices guide the model's story selection; they do not create new country-specific feeds. The configured `start_time` is read by the existing daily scheduler, which checks every 15 minutes.
 
 Edit `prompt.py` to change Qwen's briefing instructions. `main.py` imports its `build_news_prompt()` function when it analyzes each topic.
 

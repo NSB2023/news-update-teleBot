@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MorningBird launch film frames</title>
+<style>
+  :root { --paper:#e8d4ad; --paper-light:#f6e8ce; --ink:#261a13; --brown:#6b3b27; }
+  * { box-sizing:border-box; }
+  html, body { width:1080px; height:1080px; margin:0; overflow:hidden; }
+  body { font-family:Georgia,'Times New Roman',serif; background:var(--paper); color:var(--ink); }
+  .slide { position:absolute; inset:0; display:none; overflow:hidden; }
+  body.s1 #s1, body.s2 #s2, body.s3 #s3, body.s4 #s4, body.s5 #s5 { display:block; }
+  .paper { background:radial-gradient(circle at 15% 0%,#fff4d9a8,transparent 52%),linear-gradient(94deg,transparent 29%,#79523b19 31%,#fff8e12d 32%,transparent 35%),linear-gradient(173deg,transparent 57%,#65432c1a 59%,transparent 62%),var(--paper); }
+  .paper:after { content:''; position:absolute; inset:0; pointer-events:none; opacity:.23; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .kicker { font:800 21px Arial,sans-serif; letter-spacing:.22em; color:var(--brown); }
+  .folio { position:absolute; left:62px; right:62px; top:42px; display:flex; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:16px; font:700 17px Arial,sans-serif; letter-spacing:.14em; }
+  .rule { height:6px; border-top:2px solid var(--ink); border-bottom:1px solid var(--ink); }
+  .hero-photo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .darken { position:absolute; inset:0; background:linear-gradient(180deg,#100b09a8,#1a100b24 39%,#120b09dc 100%); }
+  #s1 { color:#fff0d7; }
+  #s1 .eyebrow { position:absolute; top:75px; left:74px; right:74px; padding-bottom:22px; border-bottom:2px solid #f5e6cb; font:800 22px Arial,sans-serif; letter-spacing:.2em; }
+  #s1 .title { position:absolute; left:70px; right:70px; bottom:166px; font-size:106px; font-weight:900; letter-spacing:-.07em; line-height:.9; }
+  #s1 .sub { position:absolute; left:74px; bottom:81px; font-size:33px; font-style:italic; }
+  #s2 .intro { position:absolute; top:115px; left:64px; right:64px; }
+  #s2 h1 { margin:16px 0 0; font-size:60px; line-height:.97; letter-spacing:-.055em; }
+  #s2 .screen { position:absolute; left:56px; right:56px; top:285px; height:615px; padding:10px; background:#472d1f; box-shadow:0 25px 38px #3d251940; }
+  #s2 .screen img { width:100%; height:100%; object-fit:contain; background:#e8d4ad; }
+  #s2 .bottom { position:absolute; left:63px; right:63px; bottom:64px; display:flex; justify-content:space-between; align-items:center; border-top:2px solid var(--ink); padding-top:18px; font:800 20px Arial,sans-serif; letter-spacing:.12em; }
+  #s3 .title { position:absolute; top:125px; left:64px; right:64px; font-size:76px; line-height:.95; letter-spacing:-.06em; }
+  #s3 .strip { position:absolute; left:64px; right:64px; top:350px; height:224px; overflow:hidden; border:5px solid var(--ink); }
+  #s3 .strip img { width:100%; height:100%; object-fit:cover; object-position:center 57%; filter:grayscale(1); }
+  #s3 .flow { position:absolute; left:64px; right:64px; top:634px; display:grid; grid-template-columns:repeat(4,1fr); gap:13px; }
+  #s3 .flow article { min-height:235px; padding:24px 19px; background:#f4e6c8c9; border-top:5px solid var(--brown); }
+  #s3 .flow b { font:800 18px Arial,sans-serif; color:var(--brown); }
+  #s3 .flow strong { display:block; margin:28px 0 11px; font-size:32px; line-height:1; }
+  #s3 .flow span { font-size:20px; line-height:1.15; }
+  #s4 .intro { position:absolute; left:64px; top:102px; right:64px; }
+  #s4 h1 { font-size:79px; line-height:.96; letter-spacing:-.055em; margin:18px 0; }
+  #s4 .phone { position:absolute; top:330px; left:180px; width:720px; height:635px; border-radius:54px; border:15px solid #231a15; background:#d8e1de; box-shadow:0 35px 50px #3d25194b; overflow:hidden; }
+  #s4 .phone-head { display:flex; align-items:center; gap:17px; height:88px; padding:14px 27px; background:#415c65; color:white; font:700 29px Arial,sans-serif; }
+  #s4 .phone-head small { display:block; margin-top:4px; font:16px Arial,sans-serif; opacity:.8; }
+  #s4 .telegram-mark { display:block; flex:none; width:55px; height:55px; }
+  #s4 .bubble { margin:17px 25px 0 50px; height:132px; padding:13px 19px; background:#f9fcf5; border-radius:20px 20px 8px 20px; box-shadow:0 3px 14px #243c3b1c; }
+  #s4 .bubble .sender { display:flex; align-items:center; gap:7px; color:#49666b; font:800 16px Arial,sans-serif; }
+  #s4 .bubble .sender .telegram-mark { width:22px; height:22px; }
+  #s4 .bubble h2 { margin:4px 0 7px; font-size:22px; line-height:1; }
+  #s4 .audio { display:flex; align-items:center; gap:12px; }
+  #s4 .play { display:grid; place-items:center; flex:none; width:35px; height:35px; border-radius:50%; background:#64858a; color:white; font:21px Arial,sans-serif; }
+  #s4 .wave { display:flex; align-items:center; gap:4px; height:30px; flex:1; }
+  #s4 .wave i { display:block; width:5px; border-radius:5px; background:#6a8589; }
+  #s4 .time { color:#667f82; font:15px Arial,sans-serif; white-space:nowrap; }
+  #s5 { color:#fff0d9; }
+  #s5 .darken { background:linear-gradient(180deg,#110b09c2,#130b09a8); }
+  #s5 .top { position:absolute; top:73px; left:72px; right:72px; border-bottom:2px solid #ebd9ba; padding-bottom:17px; font:800 20px Arial,sans-serif; letter-spacing:.18em; }
+  #s5 .brand { position:absolute; top:260px; left:65px; right:65px; text-align:center; font-size:102px; line-height:.92; font-weight:900; letter-spacing:-.07em; }
+  #s5 .tag { position:absolute; top:565px; left:70px; right:70px; text-align:center; font-size:50px; font-style:italic; }
+  #s5 .cta { position:absolute; left:77px; right:77px; bottom:117px; text-align:center; border-top:2px solid #e8d6ba; padding-top:23px; font:700 23px Arial,sans-serif; letter-spacing:.05em; }
+</style>
+</head>
+<body>
+<section class="slide" id="s1"><img class="hero-photo" src="hero.png"><div class="darken"></div><div class="eyebrow">A PERSONAL AUDIO NEWSPAPER</div><div class="title">THE<br>MORNINGBIRD</div><div class="sub">The world. On your way.</div></section>
+<section class="slide paper" id="s2"><div class="folio"><span>THE PERSONAL EDITION</span><span>01 / CHOOSE</span></div><div class="intro"><div class="kicker">MAKE THE NEWS YOURS</div><h1>Customize your<br>own news domain...</h1></div><div class="screen"><img src="interface.png"></div><div class="bottom"><span>REGIONS · TOPICS · SOURCES</span><span>YOUR EDITION ↗</span></div></section>
+<section class="slide paper" id="s3"><div class="folio"><span>THE EDITION ROOM</span><span>02 / CREATE</span></div><div class="title">Reporting in.<br>Briefing out.</div><div class="strip"><img src="hero.png"></div><div class="flow"><article><b>01</b><strong>RSS</strong><span>Choose trusted publishers.</span></article><article><b>02</b><strong>Qwen</strong><span>Local AI finds the story.</span></article><article><b>03</b><strong>Pocket TTS</strong><span>Speech made on your Mac.</span></article><article><b>04</b><strong>Telegram</strong><span>Audio in your chat.</span></article></div></section>
+<section class="slide paper" id="s4"><div class="folio"><span>THE MORNING DELIVERY</span><span>03 / LISTEN</span></div><div class="intro"><div class="kicker">READY FOR THE COMMUTE</div><h1>Your briefing<br>is waiting.</h1></div><div class="phone"><div class="phone-head"><svg class="telegram-mark" viewBox="0 0 64 64" aria-label="Telegram"><circle cx="32" cy="32" r="31" fill="#29a9e0"/><path d="M13 31 49 17c2-.8 3 .4 2.5 2.3L45 49c-.4 1.8-1.7 2.2-3.2 1.3L31 42l-5.2 5.1c-.6.6-1.1.9-2.2.9l.9-11.2L44 23.5 20.8 34.8 13.8 32c-1.5-.5-1.5-1.3-.8-1.7Z" fill="#fff"/></svg><div>MorningBird<small>bot · your private chat</small></div></div><div class="bubble"><div class="sender"><svg class="telegram-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#29a9e0"/><path d="M13 31 49 17c2-.8 3 .4 2.5 2.3L45 49c-.4 1.8-1.7 2.2-3.2 1.3L31 42l-5.2 5.1c-.6.6-1.1.9-2.2.9l.9-11.2L44 23.5 20.8 34.8 13.8 32c-1.5-.5-1.5-1.3-.8-1.7Z" fill="#fff"/></svg>MorningBird</div><h2>World affairs briefing</h2><div class="audio"><div class="play">▶</div><div class="wave"><i style="height:12px"></i><i style="height:21px"></i><i style="height:27px"></i><i style="height:15px"></i><i style="height:30px"></i><i style="height:20px"></i><i style="height:11px"></i><i style="height:26px"></i><i style="height:16px"></i><i style="height:22px"></i><i style="height:14px"></i><i style="height:28px"></i><i style="height:17px"></i><i style="height:25px"></i><i style="height:13px"></i><i style="height:20px"></i><i style="height:29px"></i><i style="height:15px"></i></div><div class="time">05:42</div></div></div><div class="bubble"><div class="sender">MorningBird</div><h2>Economy briefing</h2><div class="audio"><div class="play">▶</div><div class="wave"><i style="height:24px"></i><i style="height:13px"></i><i style="height:27px"></i><i style="height:16px"></i><i style="height:22px"></i><i style="height:29px"></i><i style="height:12px"></i><i style="height:25px"></i><i style="height:18px"></i><i style="height:30px"></i><i style="height:14px"></i><i style="height:23px"></i><i style="height:17px"></i><i style="height:28px"></i><i style="height:13px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:26px"></i></div><div class="time">05:18</div></div></div><div class="bubble"><div class="sender">MorningBird</div><h2>AI &amp; technology briefing</h2><div class="audio"><div class="play">▶</div><div class="wave"><i style="height:17px"></i><i style="height:27px"></i><i style="height:12px"></i><i style="height:22px"></i><i style="height:30px"></i><i style="height:15px"></i><i style="height:25px"></i><i style="height:14px"></i><i style="height:28px"></i><i style="height:18px"></i><i style="height:24px"></i><i style="height:12px"></i><i style="height:29px"></i><i style="height:16px"></i><i style="height:21px"></i><i style="height:27px"></i><i style="height:14px"></i><i style="height:23px"></i></div><div class="time">05:56</div></div></div></div></section>
+<section class="slide" id="s5"><img class="hero-photo" src="hero.png"><div class="darken"></div><div class="top">NEWS WORTH HEARING</div><div class="brand">THE<br>MORNINGBIRD</div><div class="tag">The world. On your way.</div><div class="cta">github.com/NSB2023/news-update-teleBot</div></section>
+<script>document.body.className='s'+new URLSearchParams(location.search).get('slide');</script>
+</body>
+</html>

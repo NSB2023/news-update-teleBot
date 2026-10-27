@@ -1,7 +1,9 @@
 const labels = {
-  world: ["World", "✺"], economy: ["Economy", "¤"],
-  ai_technology: ["AI & Technology", "✧"], education: ["Education", "✦"],
-  politics: ["Politics", "✳"]
+  world: ["World Affairs", "✺", "Diplomacy, conflict, climate and events that reshape the world."],
+  economy: ["Economy", "¤", "Trade, work, markets, prices and decisions affecting daily life."],
+  ai_technology: ["AI & Technology", "✧", "Artificial intelligence, science and the tools changing society."],
+  education: ["Education", "✦", "Schools, universities, skills and opportunity for the next generation."],
+  politics: ["Public Affairs", "✳", "Government, policy and decisions with broad public consequence."]
 };
 let state;
 const $ = (id) => document.getElementById(id);
@@ -27,16 +29,17 @@ function render() {
     button.onclick = () => {
       state.regions = state.regions.includes(value) ? state.regions.filter(x => x !== value) : [...state.regions, value];
       button.setAttribute("aria-pressed", state.regions.includes(value));
+      updateFolio();
     };
     regions.append(button);
   }
 
   const topics = $("topics");
-  for (const [key, [name, icon]] of Object.entries(labels)) {
+  for (const [key, [name, icon, description]] of Object.entries(labels)) {
     const card = element("button", "topic-card");
     card.type = "button";
     card.setAttribute("aria-pressed", state.enabled_topics.includes(key));
-    card.append(element("span", "topic-icon", icon), element("span", "topic-title", name), element("span", "topic-check", state.enabled_topics.includes(key) ? "✓" : ""));
+    card.append(element("span", "topic-icon", icon), element("span", "topic-title", name), element("span", "topic-desc", description), element("span", "topic-check", state.enabled_topics.includes(key) ? "✓" : ""));
     card.onclick = () => {
       state.enabled_topics = state.enabled_topics.includes(key) ? state.enabled_topics.filter(x => x !== key) : [...state.enabled_topics, key];
       card.setAttribute("aria-pressed", state.enabled_topics.includes(key));
@@ -73,9 +76,9 @@ function render() {
   $("start-time").value = state.start_time;
   $("start-time").onchange = () => { state.start_time = $("start-time").value; updateFolio(); };
   for (const name of state.voice_options) $("voice").add(new Option(name.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase()), name, false, name === state.voice));
-  $("voice").onchange = () => state.voice = $("voice").value;
+  $("voice").onchange = () => { state.voice = $("voice").value; updateFolio(); };
   for (const name of state.models) $("model").add(new Option(name, name, false, name === state.ollama_model));
-  $("model").onchange = () => state.ollama_model = $("model").value;
+  $("model").onchange = () => { state.ollama_model = $("model").value; updateFolio(); };
   $("save").onclick = save;
   updateFolio();
 }
@@ -83,13 +86,12 @@ function render() {
 function changeStories(delta) {
   state.max_stories_per_topic = Math.max(1, Math.min(10, state.max_stories_per_topic + delta));
   $("stories").textContent = state.max_stories_per_topic;
+  updateFolio();
 }
 
 function updateFolio() {
-  $("folio-country").textContent = state.home_country;
-  $("folio-topics").textContent = state.enabled_topics.length;
-  $("folio-sources").textContent = new Set(Object.values(state.feeds).flat().filter(f => f.enabled !== false).map(f => f.source)).size;
-  $("folio-time").textContent = state.start_time;
+  const publishers = new Set(Object.values(state.feeds).flat().filter(f => f.enabled !== false).map(f => f.source)).size;
+  $("edition-summary").textContent = `${state.enabled_topics.length} sections · ${publishers} publishers · ${state.start_time}`;
 }
 
 async function save() {
@@ -124,27 +126,4 @@ fetch("/api/settings").then(response => {
   return response.json();
 }).then(data => { state = data; render(); }).catch(error => {
   $("status").textContent = error.message;
-});
-
-fetch("/api/frontpage").then(response => response.json()).then(stories => {
-  const wire = $("wire-stories");
-  wire.replaceChildren();
-  if (!stories.length) {
-    wire.append(element("p", "wire-loading", "Current photo stories are unavailable. Your selected RSS sources still power the briefing."));
-    return;
-  }
-  for (const story of stories) {
-    const link = element("a", "wire-story");
-    link.href = story.url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    const photo = element("img");
-    photo.src = story.image;
-    photo.alt = "Publisher photo for: " + story.title;
-    photo.loading = "lazy";
-    link.append(photo, element("span", "wire-source", story.source), element("strong", "wire-title", story.title));
-    wire.append(link);
-  }
-}).catch(() => {
-  $("wire-stories").textContent = "Current photo stories are unavailable. Your selected RSS sources still power the briefing.";
 });

@@ -162,6 +162,7 @@ class Handler(BaseHTTPRequestHandler):
             "/style.css": (UI / "style.css", "text/css; charset=utf-8"),
             "/app.js": (UI / "app.js", "text/javascript; charset=utf-8"),
             "/assets/commuter-editorial.png": (UI / "assets" / "commuter-editorial.png", "image/png"),
+            "/assets/global-news-frontpage-coffee.png": (UI / "assets" / "global-news-frontpage-coffee.png", "image/png"),
         }
         item = files.get(route)
         if item and item[0].is_file():

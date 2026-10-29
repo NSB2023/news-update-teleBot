@@ -1,0 +1,36 @@
+/* 16:9 source layout for the website film; the square layout remains available. */
+html:has(body.wide), body.wide { width: 1280px; height: 720px; }
+body.wide .folio { left: 52px; right: 52px; top: 27px; padding-bottom: 10px; font-size: 14px; }
+body.wide .kicker { font-size: 17px; }
+body.wide .hero-photo { object-position: center center; }
+
+body.wide #s1 .eyebrow { top: 54px; left: 58px; right: 58px; padding-bottom: 15px; font-size: 18px; }
+body.wide #s1 .title { left: 58px; right: 58px; bottom: 105px; font-size: 105px; }
+body.wide #s1 .sub { left: 62px; bottom: 52px; font-size: 27px; }
+
+body.wide #s2 .intro { top: 128px; left: 60px; right: auto; width: 365px; }
+body.wide #s2 h1 { margin-top: 18px; font-size: 56px; }
+body.wide #s2 .screen { top: 118px; left: 470px; right: 54px; height: 495px; padding: 7px; box-shadow: 0 15px 25px #3d251940; }
+body.wide #s2 .bottom { left: 58px; right: 58px; bottom: 35px; padding-top: 12px; font-size: 15px; }
+
+body.wide #s3 .title { top: 126px; left: 58px; right: auto; width: 435px; font-size: 65px; }
+body.wide #s3 .strip { top: 335px; left: 58px; right: auto; width: 435px; height: 290px; }
+body.wide #s3 .flow { top: 112px; left: 540px; right: 58px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+body.wide #s3 .flow article { min-height: 238px; padding: 23px 20px; }
+body.wide #s3 .flow strong { margin: 20px 0 9px; font-size: 33px; }
+body.wide #s3 .flow span { font-size: 18px; }
+
+body.wide #s4 .intro { top: 145px; left: 58px; right: auto; width: 430px; }
+body.wide #s4 h1 { margin-top: 15px; font-size: 70px; }
+body.wide #s4 .phone { top: 105px; left: 555px; width: 655px; height: 550px; border-width: 11px; border-radius: 36px; }
+body.wide #s4 .phone-head { height: 69px; padding: 8px 23px; font-size: 24px; }
+body.wide #s4 .phone-head .telegram-mark { width: 46px; height: 46px; }
+body.wide #s4 .bubble { height: 127px; margin: 11px 20px 0 42px; padding: 11px 16px; }
+body.wide #s4 .bubble h2 { font-size: 20px; }
+body.wide #s4 .wave { gap: 3px; }
+body.wide #s4 .wave i { width: 4px; }
+
+body.wide #s5 .top { top: 52px; left: 58px; right: 58px; padding-bottom: 14px; font-size: 17px; }
+body.wide #s5 .brand { top: 210px; left: 58px; right: 58px; font-size: 102px; }
+body.wide #s5 .tag { top: 468px; left: 58px; right: 58px; font-size: 39px; }
+body.wide #s5 .cta { left: 80px; right: 80px; bottom: 53px; padding-top: 17px; font-size: 17px; }

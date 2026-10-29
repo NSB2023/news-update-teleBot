@@ -26,9 +26,24 @@ a:focus-visible, audio:focus-visible { outline: 2px solid var(--ink); outline-of
 .film h2 { margin: 6px 0 9px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1; letter-spacing: -.04em; }
 .film p:last-child { max-width: 46ch; margin: 0; color: var(--faded); font-size: 15px; line-height: 1.4; }
 .film video { display: block; width: 100%; aspect-ratio: 16 / 9; border: 3px solid var(--ink); border-radius: 10px; background: var(--ink); object-fit: contain; }
-.how, .listen { padding: 28px 0 32px; border-bottom: 1px solid var(--ink); }
+.how, .listen, .edition-preview { padding: 28px 0 32px; border-bottom: 1px solid var(--ink); }
 .section-heading h2 { margin: 5px 0 10px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1; letter-spacing: -.04em; }
 .section-heading p { margin: 0 0 18px; color: var(--faded); font-size: 15px; line-height: 1.4; }
+.preview-panel { padding: 15px 18px 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--control); }
+.domain-choices { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0 0 14px; border: 0; }
+.domain-choices legend, .preview-fields label { color: var(--faded); font: 800 10px Arial, sans-serif; letter-spacing: .12em; }
+.domain-choices legend { float: left; width: 100%; margin-bottom: 9px; padding: 0; }
+.domain-choice { padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer; font: 700 12px Arial, sans-serif; }
+.domain-choice[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--control); }
+.domain-choice:hover { border-color: var(--ink); }
+.preview-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+.preview-fields label { display: grid; gap: 5px; min-width: 0; }
+.preview-fields select, .preview-fields input[type="time"] { width: 100%; height: 39px; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 9px; background: var(--paper); color: var(--ink); font: 13px Arial, sans-serif; }
+.range-line { display: flex; align-items: center; gap: 8px; min-height: 39px; }
+.range-line input { flex: 1; min-width: 0; accent-color: var(--ink); }
+.range-line output { min-width: 40px; color: var(--ink); font: 700 12px Arial, sans-serif; white-space: nowrap; }
+.preview-readout { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); color: var(--ink); font: 700 12px Arial, sans-serif; line-height: 1.45; }
+.preview-note { margin: 8px 0 0; color: var(--faded); font-size: 12px; line-height: 1.35; }
 .steps, .clips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .steps article { padding: 14px 18px 10px; border-left: 1px solid var(--rule); }
 .steps h3 { margin: 8px 0 5px; font-size: 22px; line-height: 1.05; }
@@ -44,5 +59,5 @@ a:focus-visible, audio:focus-visible { outline: 2px solid var(--ink); outline-of
 .install .primary-action { flex: none; }
 footer { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0 16px; border-top: 3px double var(--ink); color: var(--faded); font: 800 9px Arial, sans-serif; letter-spacing: .08em; }
 footer a { text-decoration: none; }
-@media (max-width: 850px) { .front { grid-template-columns: 1fr; } .front-image { max-width: 700px; } .film { grid-template-columns: 1fr; } .film video { max-width: 540px; } .steps, .clips { grid-template-columns: 1fr; } .steps article { padding-block: 5px 12px; } .clip h3 { min-height: 0; } }
-@media (max-width: 560px) { .folio span:last-child, footer span:nth-child(2) { display: none; } .brand { font-size: clamp(35px, 10vw, 55px); } .front h1 { font-size: clamp(43px, 11vw, 66px); } .install { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 850px) { .front { grid-template-columns: 1fr; } .front-image { max-width: 700px; } .film { grid-template-columns: 1fr; } .film video { max-width: 540px; } .preview-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .steps, .clips { grid-template-columns: 1fr; } .steps article { padding-block: 5px 12px; } .clip h3 { min-height: 0; } }
+@media (max-width: 560px) { .folio span:last-child, footer span:nth-child(2) { display: none; } .brand { font-size: clamp(35px, 10vw, 55px); } .front h1 { font-size: clamp(43px, 11vw, 66px); } .preview-fields { grid-template-columns: 1fr; } .install { align-items: flex-start; flex-direction: column; } }

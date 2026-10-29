@@ -12,6 +12,7 @@
   <meta name="theme-color" content="#f4e6c8">
   <title>MorningBird — Your news, read for the road</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/preview.js" defer></script>
 </head>
 <body>
   <div class="paper">
@@ -46,13 +47,25 @@
         </video>
       </section>
 
-      <section class="how" aria-labelledby="how-title">
-        <div class="section-heading"><span>HOW THE EDITION IS MADE</span><h2 id="how-title">From the wire to your headphones</h2></div>
-        <div class="steps">
-          <article><span class="step-number">01</span><h3>Choose your desks</h3><p>Select topics, regions, publishers, a morning time, and a narrator on your Mac.</p></article>
-          <article><span class="step-number">02</span><h3>Read with local AI</h3><p>MorningBird gathers RSS articles and uses your local Qwen model to choose and summarize them.</p></article>
-          <article><span class="step-number">03</span><h3>Listen on your way</h3><p>Pocket TTS creates audio on your Mac. Telegram delivers each finished topic as a voice message.</p></article>
+      <section class="edition-preview" id="preview" aria-labelledby="preview-title">
+        <div class="section-heading"><span>TRY THE EDITION DESK</span><h2 id="preview-title">Choose your morning.</h2><p>Explore the controls you can use when MorningBird runs on your Mac.</p></div>
+        <div class="preview-panel">
+          <fieldset class="domain-choices"><legend>NEWS DOMAINS</legend>
+            <button type="button" class="domain-choice" data-domain="World" aria-pressed="true">World</button>
+            <button type="button" class="domain-choice" data-domain="Economy" aria-pressed="true">Economy</button>
+            <button type="button" class="domain-choice" data-domain="AI" aria-pressed="true">AI &amp; technology</button>
+            <button type="button" class="domain-choice" data-domain="Education" aria-pressed="false">Education</button>
+            <button type="button" class="domain-choice" data-domain="Politics" aria-pressed="false">Politics</button>
+          </fieldset>
+          <div class="preview-fields">
+            <label>LOCAL AI MODEL<select id="preview-model"><option value="Qwen 3.5 4B">Qwen 3.5 · 4B</option><option value="Qwen 3.5 2B">Qwen 3.5 · 2B</option><option value="Gemma 4 e2b">Gemma 4 · e2b</option></select></label>
+            <label>TIMEZONE<select id="preview-timezone"><option value="Asia/Dhaka">Dhaka · UTC+6</option><option value="Asia/Kolkata">Kolkata · UTC+5:30</option><option value="Europe/London">London</option><option value="America/New_York">New York</option><option value="UTC">UTC</option></select></label>
+            <label>DELIVERY TIME<input id="preview-time" type="time" value="08:00"></label>
+            <label>BRIEFING LENGTH<span class="range-line"><input id="preview-duration" type="range" min="3" max="15" value="6"><output id="preview-duration-value" for="preview-duration">6 min</output></span></label>
+          </div>
+          <p class="preview-readout" id="preview-readout" role="status" aria-live="polite"></p>
         </div>
+        <p class="preview-note">This is a settings preview. Install MorningBird on your Mac to save choices and receive new briefings.</p>
       </section>
 
       <section class="listen" id="listen" aria-labelledby="listen-title">
@@ -73,6 +86,15 @@
             <audio controls preload="metadata" src="/assets/ai.mp3">Your browser does not support audio playback.</audio>
             <a href="https://www.theguardian.com/technology/2026/oct/26/anthropics-claude-ai-model-accessed-georgia-voter-data-in-us" target="_blank" rel="noopener noreferrer">Original report · The Guardian <span aria-hidden="true">➜</span></a>
           </article>
+        </div>
+      </section>
+
+      <section class="how" aria-labelledby="how-title">
+        <div class="section-heading"><span>HOW THE EDITION IS MADE</span><h2 id="how-title">From the wire to your headphones</h2></div>
+        <div class="steps">
+          <article><span class="step-number">01</span><h3>Choose your desks</h3><p>Select topics, regions, publishers, a morning time, and a narrator on your Mac.</p></article>
+          <article><span class="step-number">02</span><h3>Read with local AI</h3><p>MorningBird gathers RSS articles and uses your local Qwen model to choose and summarize them.</p></article>
+          <article><span class="step-number">03</span><h3>Listen on your way</h3><p>Pocket TTS creates audio on your Mac. Telegram delivers each finished topic as a voice message.</p></article>
         </div>
       </section>
 

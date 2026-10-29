@@ -1,6 +1,6 @@
 # MorningBird public showcase
 
-This directory is a static public page for Vercel. It contains the newspaper image, the 15-second project video, and three edited excerpts from past generated briefings. It does not connect to the local configuration API, Ollama, Telegram, or the user's `.env`.
+This directory is a static public page for Vercel. It contains the newspaper image, a true 16:9 version of the 15-second project video, and three edited excerpts from past generated briefings. Its interactive edition desk is a preview only. It does not connect to the local configuration API, Ollama, Telegram, or the user's `.env`.
 
 For Git deployment, import `NSB2023/news-update-teleBot` into Vercel and set **Root Directory** to `showcase`. Use the **Other** framework preset with no build command. Vercel will serve `index.html` and `assets/` as static files.
 

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MorningBird turns selected news into a spoken briefing on your Mac, then delivers it to Telegram.">
+  <meta property="og:title" content="MorningBird — Your news, read for the road">
+  <meta property="og:description" content="A local Mac news briefing with Qwen, Pocket TTS, and Telegram. Hear three excerpts from past editions.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://morningbird-news.vercel.app/">
+  <meta property="og:image" content="https://morningbird-news.vercel.app/assets/newsroom.png">
+  <meta name="theme-color" content="#f4e6c8">
+  <title>MorningBird — Your news, read for the road</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="paper">
+    <header class="masthead">
+      <div class="folio"><span>AN EDITION FOR THE DAILY COMMUTE</span><span>LOCAL MAC PROJECT · OPEN SOURCE</span></div>
+      <a class="brand" href="/" aria-label="MorningBird home">THE MORNINGBIRD</a>
+      <div class="strapline">THE WORLD, SELECTED FOR YOU</div>
+    </header>
+
+    <main>
+      <section class="front" aria-labelledby="front-title">
+        <div class="front-copy">
+          <p class="eyebrow">YOUR PRIVATE MORNING PAPER</p>
+          <h1 id="front-title">Your news.<br>Your voice.<br>Your way to work.</h1>
+          <p class="intro">MorningBird gathers reporting from sources you choose, asks a local AI model to select and explain the stories, then sends a spoken edition to your Telegram chat.</p>
+          <div class="front-actions">
+            <a class="primary-action" href="https://github.com/NSB2023/news-update-teleBot" target="_blank" rel="noopener noreferrer">GET MORNINGBIRD <span aria-hidden="true">➜</span></a>
+            <a class="text-action" href="#listen">HEAR A PAST EDITION ↓</a>
+          </div>
+        </div>
+        <figure class="front-image">
+          <img src="/assets/newsroom.png" alt="Black and white editorial illustration of a newspaper reader, books, coffee, and a world news scene">
+          <figcaption>AN ILLUSTRATED WORLD OF NEWS · EDITORIAL ARTWORK</figcaption>
+        </figure>
+      </section>
+
+      <section class="how" aria-labelledby="how-title">
+        <div class="section-heading"><span>HOW THE EDITION IS MADE</span><h2 id="how-title">From the wire to your headphones</h2></div>
+        <div class="steps">
+          <article><span class="step-number">01</span><h3>Choose your desks</h3><p>Select topics, regions, publishers, a morning time, and a narrator on your Mac.</p></article>
+          <article><span class="step-number">02</span><h3>Read with local AI</h3><p>MorningBird gathers RSS articles and uses your local Qwen model to choose and summarize them.</p></article>
+          <article><span class="step-number">03</span><h3>Listen on your way</h3><p>Pocket TTS creates audio on your Mac. Telegram delivers each finished topic as a voice message.</p></article>
+        </div>
+      </section>
+
+      <section class="listen" id="listen" aria-labelledby="listen-title">
+        <div class="section-heading"><span>FROM PAST EDITIONS</span><h2 id="listen-title">Listen to MorningBird</h2><p>Short excerpts from original generated briefings. These are dated reports; read the source articles for the full context.</p></div>
+        <div class="clips">
+          <article class="clip">
+            <p class="clip-folio">28 OCT 2026 / ECONOMY</p><h3>Dhaka Metro contracts</h3>
+            <audio controls preload="metadata" src="/assets/economy.mp3">Your browser does not support audio playback.</audio>
+            <a href="https://www.thedailystar.net/business/economy/news/indian-firm-lt-wins-1b-dhaka-metro-contracts-4309131" target="_blank" rel="noopener noreferrer">Original report · The Daily Star <span aria-hidden="true">➜</span></a>
+          </article>
+          <article class="clip">
+            <p class="clip-folio">28 OCT 2026 / EDUCATION</p><h3>HSC results update</h3>
+            <audio controls preload="metadata" src="/assets/education.mp3">Your browser does not support audio playback.</audio>
+            <a href="https://www.thedailystar.net/news/education/news/hsc-2026-results-october-31-how-check-your-results-online-and-sms-4308776" target="_blank" rel="noopener noreferrer">Original report · The Daily Star <span aria-hidden="true">➜</span></a>
+          </article>
+          <article class="clip">
+            <p class="clip-folio">26 OCT 2026 / TECHNOLOGY</p><h3>AI &amp; voter data</h3>
+            <audio controls preload="metadata" src="/assets/ai.mp3">Your browser does not support audio playback.</audio>
+            <a href="https://www.theguardian.com/technology/2026/oct/26/anthropics-claude-ai-model-accessed-georgia-voter-data-in-us" target="_blank" rel="noopener noreferrer">Original report · The Guardian <span aria-hidden="true">➜</span></a>
+          </article>
+        </div>
+      </section>
+
+      <section class="install" aria-labelledby="install-title">
+        <div><p class="eyebrow">MAKE YOUR OWN EDITION</p><h2 id="install-title">The newsroom lives on your Mac.</h2><p>MorningBird runs Qwen and Pocket TTS locally. The public page is a showcase; your private settings and Telegram bot stay on your computer.</p></div>
+        <a class="primary-action" href="https://github.com/NSB2023/news-update-teleBot#setup" target="_blank" rel="noopener noreferrer">INSTALL FROM GITHUB <span aria-hidden="true">➜</span></a>
+      </section>
+    </main>
+
+    <footer><span>MORNINGBIRD © 2026</span><span>YOUR SOURCES · YOUR SECTIONS · YOUR TIME</span><a href="https://github.com/NSB2023/news-update-teleBot" target="_blank" rel="noopener noreferrer">SOURCE CODE ➜</a></footer>
+  </div>
+</body>
+</html>

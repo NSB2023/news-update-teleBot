@@ -1,4 +1,5 @@
 .env
+.vercel/
 .venv/
 output/
 data/
@@ -6,4 +7,6 @@ voices/
 __pycache__/
 *.wav
 *.mp3
+!ui/assets/excerpts/*.mp3
+!showcase/assets/*.mp3
 .DS_Store

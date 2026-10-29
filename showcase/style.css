@@ -25,7 +25,7 @@ a:focus-visible, audio:focus-visible { outline: 2px solid var(--ink); outline-of
 .film { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: clamp(24px, 4vw, 60px); padding: 28px 0; border-bottom: 1px solid var(--ink); }
 .film h2 { margin: 6px 0 9px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1; letter-spacing: -.04em; }
 .film p:last-child { max-width: 46ch; margin: 0; color: var(--faded); font-size: 15px; line-height: 1.4; }
-.film video { display: block; width: 100%; aspect-ratio: 1; border: 3px solid var(--ink); border-radius: 10px; background: var(--ink); object-fit: contain; }
+.film video { display: block; width: 100%; aspect-ratio: 16 / 9; border: 3px solid var(--ink); border-radius: 10px; background: var(--ink); object-fit: contain; }
 .how, .listen { padding: 28px 0 32px; border-bottom: 1px solid var(--ink); }
 .section-heading h2 { margin: 5px 0 10px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1; letter-spacing: -.04em; }
 .section-heading p { margin: 0 0 18px; color: var(--faded); font-size: 15px; line-height: 1.4; }
